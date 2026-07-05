@@ -1,5 +1,6 @@
 # goBoard — deploy guide
 
+
 A lightweight scrum board: kanban with drag-and-drop, backlog, and reports.
 One codebase, two tiers. It detects which tier it's running in automatically —
 you never edit the code to upgrade.
