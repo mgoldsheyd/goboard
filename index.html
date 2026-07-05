@@ -1,0 +1,544 @@
+<!-- goBoard — scrum project management board with persistent shared storage -->
+<style>
+:root{
+  --ink:#1B2733; --ink-2:#51606E; --ink-3:#8A97A3;
+  --bg:#F5F7F9; --panel:#FFFFFF; --line:#E3E8ED; --line-2:#EDF1F4;
+  --accent:#185FA5; --accent-soft:#E8F1FA;
+  --green:#2E7D4F; --green-soft:#E7F3EC;
+  --amber:#B26A00; --amber-soft:#FCF2E2;
+  --red:#A32D2D; --red-soft:#FCEBEB;
+  --violet:#5B4B9E; --violet-soft:#EEEBF8;
+  --radius:8px; --radius-sm:6px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);color:var(--ink);background:var(--bg)}
+.app{display:flex;min-height:620px;height:100vh;max-height:900px;background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+
+/* ---------- Sidebar ---------- */
+.sidebar{width:200px;min-width:200px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 12px}
+.logo{display:flex;align-items:center;gap:10px;padding:2px 6px 14px;border-bottom:1px solid var(--line-2);margin-bottom:10px}
+.logo-mark{width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;letter-spacing:-.5px}
+.logo-text{font-size:15px;font-weight:600}
+.logo-sub{font-size:10.5px;color:var(--ink-3)}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding:10px 6px 4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--radius-sm);font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none}
+.nav-item:hover{background:var(--bg)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nav-item svg{width:15px;height:15px;flex:none}
+.sprint-progress{margin-top:auto;padding:10px 6px 2px;border-top:1px solid var(--line-2)}
+.progress-bar{height:5px;border-radius:3px;background:var(--bg);overflow:hidden;margin:6px 0 4px}
+.progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s}
+.save-dot{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink-3);padding:8px 6px 0}
+.save-dot i{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block}
+.save-dot.saving i{background:var(--amber)}
+.save-dot.err i{background:var(--red)}
+
+/* ---------- Main ---------- */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;background:var(--panel);border-bottom:1px solid var(--line)}
+.topbar h1{font-size:17px;font-weight:600}
+.sprint-badge{font-size:10.5px;font-weight:600;color:var(--green);background:var(--green-soft);padding:3px 8px;border-radius:20px;margin-left:8px}
+.btn{font-family:var(--font);font-size:12.5px;font-weight:500;padding:7px 12px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:#134d87}
+.btn-danger{color:var(--red);border-color:transparent;background:transparent}
+.btn-danger:hover{background:var(--red-soft)}
+
+/* ---------- Filters + stats ---------- */
+.filterbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--line)}
+.filterbar select{font-family:var(--font);font-size:12px;padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--panel);color:var(--ink-2)}
+.stats{display:flex;gap:16px;margin-left:auto;flex-wrap:wrap}
+.stat{font-size:11.5px;color:var(--ink-3)}
+.stat b{color:var(--ink);font-weight:600}
+
+/* ---------- Board ---------- */
+.view{flex:1;overflow:auto;padding:16px 18px}
+.board{display:flex;gap:12px;align-items:flex-start;min-height:100%}
+.col{width:230px;min-width:230px;background:#EEF2F5;border-radius:var(--radius);padding:8px}
+.col.dragover{outline:2px dashed var(--accent);outline-offset:-2px}
+.col-head{display:flex;align-items:center;gap:7px;padding:4px 6px 8px}
+.col-dot{width:8px;height:8px;border-radius:50%}
+.col-title{font-size:11.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-2)}
+.col-count{font-size:11px;color:var(--ink-3);margin-left:auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;cursor:grab;box-shadow:0 1px 2px rgba(20,40,60,.05)}
+.card:active{cursor:grabbing}
+.card:hover{border-color:#C7D3DD}
+.card-id{font-size:10px;font-weight:600;color:var(--ink-3);letter-spacing:.04em}
+.card-title{font-size:12.5px;font-weight:500;margin:3px 0 8px;line-height:1.35}
+.card-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.chip{font-size:10px;font-weight:600;padding:2px 7px;border-radius:12px}
+.chip.effort{background:var(--violet-soft);color:var(--violet)}
+.chip.cat{background:var(--accent-soft);color:var(--accent)}
+.chip.p1,.chip.p2{background:var(--red-soft);color:var(--red)}
+.chip.p3{background:var(--amber-soft);color:var(--amber)}
+.chip.p4,.chip.p5{background:var(--line-2);color:var(--ink-2)}
+.avatar{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:auto}
+.card-flags{display:flex;gap:8px;margin-top:7px;font-size:10px;color:var(--ink-3)}
+.card-flags span{display:flex;align-items:center;gap:3px}
+
+/* ---------- Backlog ---------- */
+.table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.table th{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);text-align:left;padding:9px 12px;background:#FAFBFC;border-bottom:1px solid var(--line)}
+.table td{font-size:12.5px;padding:9px 12px;border-bottom:1px solid var(--line-2);color:var(--ink-2);vertical-align:middle}
+.table tr:last-child td{border-bottom:none}
+.table tr{cursor:pointer}
+.table tbody tr:hover{background:#FAFCFE}
+.table td:nth-child(2){color:var(--ink);font-weight:500}
+.status-pill{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:12px;white-space:nowrap}
+
+/* ---------- Reports ---------- */
+.report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.panel h3{font-size:13px;font-weight:600;margin-bottom:2px}
+.panel .sub{font-size:11px;color:var(--ink-3);margin-bottom:12px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-label{width:120px;font-size:11.5px;color:var(--ink-2);flex:none}
+.bar-track{flex:1;height:8px;border-radius:4px;background:var(--line-2);overflow:hidden}
+.bar-fill{height:100%;border-radius:4px}
+.bar-val{width:30px;font-size:11px;color:var(--ink-3);text-align:right;flex:none}
+.workload{display:flex;flex-direction:column;gap:10px}
+.wl-card{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line-2);border-radius:var(--radius-sm)}
+.wl-name{font-size:12.5px;font-weight:500}
+.wl-sub{font-size:11px;color:var(--ink-3)}
+
+/* ---------- Modal ---------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(20,35,50,.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal{background:var(--panel);border-radius:12px;width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 16px 40px rgba(10,25,40,.2)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line-2)}
+.modal-header h2{font-size:15px;font-weight:600}
+.modal-close{border:none;background:none;font-size:18px;color:var(--ink-3);cursor:pointer;line-height:1}
+.modal-body{padding:14px 18px;overflow:auto}
+.field-group{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field.full{grid-column:1/-1}
+.field label{font-size:11px;font-weight:600;color:var(--ink-2)}
+.field input,.field select,.field textarea{font-family:var(--font);font-size:12.5px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 9px;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:52px}
+.modal-footer{padding:12px 18px;border-top:1px solid var(--line-2);display:flex;justify-content:space-between;align-items:center}
+.modal-footer-right{display:flex;gap:8px}
+.hidden{display:none!important}
+
+/* ---------- Loading / empty ---------- */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;height:100%;color:var(--ink-3);font-size:13px}
+.spinner{width:22px;height:22px;border:2.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{font-size:12px;color:var(--ink-3);text-align:center;padding:18px 6px}
+
+@media (max-width:760px){
+  .sidebar{width:60px;min-width:60px;padding:12px 8px}
+  .logo-text,.logo-sub,.nav-label,.nav-item span,.sprint-progress,.save-dot b{display:none}
+  .nav-item{justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">go</div>
+      <div><div class="logo-text">goBoard</div><div class="logo-sub">Acme Platform</div></div>
+    </div>
+    <div class="nav-label">Sprint</div>
+    <div class="nav-item active" id="nav-board" onclick="switchView('board')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg><span>Board</span></div>
+    <div class="nav-item" id="nav-backlog" onclick="switchView('backlog')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Backlog</span></div>
+    <div class="nav-label">Insights</div>
+    <div class="nav-item" id="nav-reports" onclick="switchView('reports')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg><span>Reports</span></div>
+    <div class="sprint-progress">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:11px;color:var(--ink-2);font-weight:500">Sprint 14</div>
+        <div style="font-size:10px;color:var(--ink-3)">8d left</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="sidebar-progress" style="width:0%"></div></div>
+      <div style="font-size:10px;color:var(--ink-3)" id="sidebar-pct"></div>
+    </div>
+    <div class="save-dot" id="save-dot"><i></i><b id="save-text">All changes saved</b></div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center"><h1 id="view-title">Sprint 14</h1><span class="sprint-badge" id="active-badge">Active</span></div>
+      <button class="btn btn-primary" onclick="openNewCard()">+ New ticket</button>
+    </div>
+    <div class="filterbar" id="filterbar">
+      <select id="filter-cat" onchange="render()"><option value="">All categories</option></select>
+      <select id="filter-pri" onchange="render()"><option value="">All priorities</option><option>P1</option><option>P2</option><option>P3</option><option>P4</option><option>P5</option></select>
+      <select id="filter-asg" onchange="render()"><option value="">All assignees</option></select>
+      <div class="stats">
+        <div class="stat"><b id="stat-tickets">0</b> tickets</div>
+        <div class="stat"><b id="stat-points">0</b> points</div>
+        <div class="stat"><b id="stat-done">0</b> done</div>
+        <div class="stat"><b id="stat-blocked">0</b> blocked</div>
+      </div>
+    </div>
+    <div class="view" id="view-container">
+      <div class="loading"><div class="spinner"></div>Loading your board…</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header"><h2 id="modal-title">New ticket</h2><button class="modal-close" onclick="closeModal()" aria-label="Close">✕</button></div>
+    <div class="modal-body">
+      <div class="field-group">
+        <div class="field"><label>Ticket ID</label><input id="f-id" placeholder="AUTO" readonly style="color:var(--ink-3)"></div>
+        <div class="field"><label>Status</label><select id="f-status"></select></div>
+        <div class="field full"><label>Title</label><input id="f-title" placeholder="Short summary of the work"></div>
+        <div class="field full"><label>Description</label><textarea id="f-desc" placeholder="What needs to be done and why"></textarea></div>
+        <div class="field"><label>Effort (Fibonacci)</label><select id="f-effort"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>8</option><option>13</option><option>21</option></select></div>
+        <div class="field"><label>Priority</label><select id="f-priority"><option>P1</option><option>P2</option><option selected>P3</option><option>P4</option><option>P5</option></select></div>
+        <div class="field"><label>Assignee</label><input id="f-assignee" placeholder="Name"></div>
+        <div class="field"><label>Category</label><input id="f-category" placeholder="e.g. Frontend, API, Infra"></div>
+        <div class="field"><label>Feature name</label><input id="f-feature" placeholder="Parent feature"></div>
+        <div class="field"><label>Release number</label><input id="f-release" placeholder="e.g. 2.4"></div>
+        <div class="field full"><label>Risks</label><textarea id="f-risks" placeholder="Known risks, one per line"></textarea></div>
+        <div class="field full"><label>Dependencies</label><textarea id="f-deps" placeholder="Blocking tickets or teams"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger hidden" id="btn-delete" onclick="deleteCard()">Delete ticket</button>
+      <div class="modal-footer-right">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="btn-save" onclick="saveCard()">Save ticket</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ Config ============ */
+const STATUSES = ["New","Ready","In Progress","Blocked","In Review","QA","Ready for Release","Done"];
+const STATUS_COLORS = {"New":"#8A97A3","Ready":"#5B4B9E","In Progress":"#185FA5","Blocked":"#A32D2D","In Review":"#B26A00","QA":"#0E7C86","Ready for Release":"#3B7DD8","Done":"#2E7D4F"};
+const STORAGE_KEY = "goboard-state-v1";
+/* Storage tiers (auto-detected at load):
+   - "remote": a /api/board endpoint exists and is configured → one shared
+     board for everyone, saved in a database. (Tier 3 — see README.)
+   - "local":  no backend → each person's board saves to their own browser
+     via localStorage. (Tier 2 — works on any static host.)              */
+let storageMode = "local";
+
+/* ============ Seed data (first run only) ============ */
+const SEED = {
+  nextId: 1013,
+  tickets: [
+    t(1001,"Set up OAuth login flow","Implement OAuth 2.0 with Google and Microsoft providers.",5,"P1","Maya","In Progress","Token refresh edge cases","Identity provider config","Backend","Auth","2.4"),
+    t(1002,"Design ticket detail panel","Slide-over panel with full ticket schema and edit-in-place.",3,"P2","Jordan","In Review","","AUTH-1001","Frontend","Board UX","2.4"),
+    t(1003,"Burndown chart data model","Daily snapshot job for remaining points per sprint.",8,"P2","Priya","In Progress","Timezone handling for day boundaries","","Backend","Reports","2.4"),
+    t(1004,"Drag-and-drop between columns","HTML5 DnD with keyboard fallback.",5,"P1","Jordan","Done","","","Frontend","Board UX","2.4"),
+    t(1005,"Sprint velocity rollup","Aggregate completed points across last 5 sprints.",3,"P3","Priya","QA","","1003","Backend","Reports","2.4"),
+    t(1006,"Rate limiting on API","Protect write endpoints, 100 req/min per user.",3,"P2","Sam","Blocked","Shared infra dependency","Platform team gateway change","Infra","Hardening","2.5"),
+    t(1007,"Empty-state illustrations","Friendly empty states for board, backlog, reports.",2,"P4","Maya","Ready","","","Frontend","Polish","2.5"),
+    t(1008,"Audit log for ticket changes","Track who changed what and when.",8,"P3","Sam","New","Storage growth","","Backend","Compliance","2.5"),
+    t(1009,"Filter persistence","Remember last-used filters per user.",2,"P4","Jordan","Ready","","","Frontend","Board UX","2.5"),
+    t(1010,"CSV export of backlog","Download filtered backlog as CSV.",3,"P3","Priya","New","","","Backend","Reports","2.5"),
+    t(1011,"Mobile board layout","Single-column swipeable board under 760px.",5,"P2","Maya","Ready","Gesture conflicts with scroll","","Frontend","Board UX","2.5"),
+    t(1012,"Fix duplicate ticket IDs","Race condition when two users create at once.",2,"P1","Sam","Done","","","Backend","Hardening","2.4"),
+  ],
+  velocity: [{s:"S10",p:28},{s:"S11",p:34},{s:"S12",p:31},{s:"S13",p:38}]
+};
+function t(id,title,desc,effort,priority,assignee,status,risks,deps,category,feature,release){
+  return {id:"GO-"+id,title,desc,effort,priority,assignee,status,risks,deps,category,feature,release};
+}
+
+/* ============ State + persistence ============ */
+let state = null;
+let editingId = null;
+let saveTimer = null;
+
+async function loadState(){
+  // Tier 3 first: is there a configured backend?
+  try{
+    const r = await fetch("/api/board", {method:"GET"});
+    if(r.ok){
+      storageMode = "remote";
+      const j = await r.json();
+      if(j && j.state){ state = j.state; return; }
+      state = JSON.parse(JSON.stringify(SEED));
+      persist();
+      return;
+    }
+  }catch(e){ /* no backend — fall through to local */ }
+
+  // Tier 2: this browser's localStorage
+  storageMode = "local";
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ state = JSON.parse(raw); return; }
+  }catch(e){ /* corrupted or blocked — reseed */ }
+  state = JSON.parse(JSON.stringify(SEED));
+  persist();
+}
+
+function persist(){
+  setSaveDot("saving","Saving…");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    if(storageMode === "remote"){
+      try{
+        const r = await fetch("/api/board", {
+          method:"PUT",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({state})
+        });
+        setSaveDot(r.ok ? "" : "err", r.ok ? "Saved · shared board" : "Save failed — retry");
+      }catch(e){ setSaveDot("err","Save failed — retry"); }
+      return;
+    }
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      setSaveDot("","Saved to this browser");
+    }catch(e){ setSaveDot("err","Couldn't save — storage blocked"); }
+  }, 400);
+}
+function setSaveDot(cls,text){
+  const d = document.getElementById("save-dot");
+  d.className = "save-dot" + (cls ? " "+cls : "");
+  document.getElementById("save-text").textContent = text;
+}
+
+/* ============ Views ============ */
+let currentView = "board";
+function switchView(v){
+  currentView = v;
+  ["board","backlog","reports"].forEach(x=>document.getElementById("nav-"+x).classList.toggle("active", x===v));
+  document.getElementById("view-title").textContent = v==="board" ? "Sprint 14" : v==="backlog" ? "Backlog" : "Reports";
+  document.getElementById("active-badge").style.display = v==="board" ? "" : "none";
+  document.getElementById("filterbar").style.display = v==="reports" ? "none" : "";
+  render();
+}
+
+function filtered(){
+  const c = document.getElementById("filter-cat").value;
+  const p = document.getElementById("filter-pri").value;
+  const a = document.getElementById("filter-asg").value;
+  return state.tickets.filter(x => (!c||x.category===c) && (!p||x.priority===p) && (!a||x.assignee===a));
+}
+
+function render(){
+  if(!state) return;
+  refreshFilterOptions();
+  updateStats();
+  const el = document.getElementById("view-container");
+  if(currentView==="board") el.innerHTML = renderBoard();
+  else if(currentView==="backlog") el.innerHTML = renderBacklog();
+  else el.innerHTML = renderReports();
+  if(currentView==="board") wireDnD();
+}
+
+function refreshFilterOptions(){
+  fillSelect("filter-cat","All categories",[...new Set(state.tickets.map(x=>x.category).filter(Boolean))].sort());
+  fillSelect("filter-asg","All assignees",[...new Set(state.tickets.map(x=>x.assignee).filter(Boolean))].sort());
+}
+function fillSelect(id,label,opts){
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">${label}</option>` + opts.map(o=>`<option${o===cur?" selected":""}>${esc(o)}</option>`).join("");
+}
+
+function updateStats(){
+  const f = filtered();
+  const done = f.filter(x=>x.status==="Done");
+  const donePts = done.reduce((s,x)=>s+ +x.effort,0);
+  const totalPts = f.reduce((s,x)=>s+ +x.effort,0);
+  document.getElementById("stat-tickets").textContent = f.length;
+  document.getElementById("stat-points").textContent = totalPts;
+  document.getElementById("stat-done").textContent = done.length;
+  document.getElementById("stat-blocked").textContent = f.filter(x=>x.status==="Blocked").length;
+  const pct = totalPts ? Math.round(donePts/totalPts*100) : 0;
+  document.getElementById("sidebar-progress").style.width = pct+"%";
+  document.getElementById("sidebar-pct").textContent = pct+"% of points complete";
+}
+
+/* ---------- Board ---------- */
+function renderBoard(){
+  const f = filtered();
+  return `<div class="board">` + STATUSES.map(s=>{
+    const cards = f.filter(x=>x.status===s);
+    return `<div class="col" data-status="${s}">
+      <div class="col-head"><span class="col-dot" style="background:${STATUS_COLORS[s]}"></span>
+      <span class="col-title">${s}</span><span class="col-count">${cards.length}</span></div>
+      ${cards.map(cardHTML).join("") || `<div class="empty">No tickets</div>`}
+    </div>`;
+  }).join("") + `</div>`;
+}
+function cardHTML(x){
+  const pcls = x.priority.toLowerCase();
+  const risks = (x.risks||"").trim(), deps = (x.deps||"").trim();
+  return `<div class="card" draggable="true" data-id="${x.id}" onclick="openEdit('${x.id}')">
+    <div class="card-id">${x.id}${x.feature ? " · "+esc(x.feature) : ""}</div>
+    <div class="card-title">${esc(x.title)}</div>
+    <div class="card-meta">
+      <span class="chip effort">${x.effort} pts</span>
+      <span class="chip ${pcls}">${x.priority}</span>
+      ${x.category ? `<span class="chip cat">${esc(x.category)}</span>` : ""}
+      ${x.assignee ? `<span class="avatar" title="${esc(x.assignee)}">${initials(x.assignee)}</span>` : ""}
+    </div>
+    ${risks||deps ? `<div class="card-flags">${risks?`<span>⚠ risk</span>`:""}${deps?`<span>⛓ dependency</span>`:""}${x.release?`<span>rel ${esc(x.release)}</span>`:""}</div>` : ""}
+  </div>`;
+}
+function wireDnD(){
+  let dragId = null;
+  document.querySelectorAll(".card").forEach(c=>{
+    c.addEventListener("dragstart", e=>{ dragId = c.dataset.id; e.dataTransfer.effectAllowed="move"; });
+  });
+  document.querySelectorAll(".col").forEach(col=>{
+    col.addEventListener("dragover", e=>{ e.preventDefault(); col.classList.add("dragover"); });
+    col.addEventListener("dragleave", ()=>col.classList.remove("dragover"));
+    col.addEventListener("drop", e=>{
+      e.preventDefault(); col.classList.remove("dragover");
+      const tk = state.tickets.find(x=>x.id===dragId);
+      if(tk && tk.status!==col.dataset.status){ tk.status = col.dataset.status; persist(); render(); }
+    });
+  });
+}
+
+/* ---------- Backlog ---------- */
+function renderBacklog(){
+  const f = [...filtered()].sort((a,b)=>a.priority.localeCompare(b.priority)||a.id.localeCompare(b.id));
+  return `<table class="table"><thead><tr>
+    <th>ID</th><th>Title</th><th>Status</th><th>Priority</th><th>Effort</th><th>Assignee</th><th>Category</th><th>Feature</th><th>Release</th>
+  </tr></thead><tbody>` + f.map(x=>`
+    <tr onclick="openEdit('${x.id}')">
+      <td>${x.id}</td><td>${esc(x.title)}</td>
+      <td><span class="status-pill" style="background:${STATUS_COLORS[x.status]}1A;color:${STATUS_COLORS[x.status]}">${x.status}</span></td>
+      <td>${x.priority}</td><td>${x.effort}</td><td>${esc(x.assignee||"—")}</td>
+      <td>${esc(x.category||"—")}</td><td>${esc(x.feature||"—")}</td><td>${esc(x.release||"—")}</td>
+    </tr>`).join("") + `</tbody></table>`;
+}
+
+/* ---------- Reports ---------- */
+function renderReports(){
+  const tks = state.tickets;
+  const total = tks.reduce((s,x)=>s+ +x.effort,0);
+  const donePts = tks.filter(x=>x.status==="Done").reduce((s,x)=>s+ +x.effort,0);
+  return `<div class="report-grid">
+    <div class="panel"><h3>Burndown</h3><div class="sub">Sprint 14 · points remaining vs. ideal</div>${burndownSVG(total,donePts)}</div>
+    <div class="panel"><h3>Velocity</h3><div class="sub">Completed points, last 5 sprints</div>${velocitySVG(donePts)}</div>
+    <div class="panel"><h3>Status breakdown</h3><div class="sub">Tickets by working status</div>${statusBars(tks)}</div>
+    <div class="panel"><h3>Team workload</h3><div class="sub">Open points per assignee</div>${workload(tks)}</div>
+  </div>`;
+}
+function burndownSVG(total,donePts){
+  const W=300,H=150,P=26, days=10, dayNow=2, remaining=total-donePts;
+  const pts=[]; for(let d=0;d<=dayNow;d++){ pts.push(total - (donePts*(d/Math.max(dayNow,1)))); }
+  const x=i=>P+(W-2*P)*i/days, y=v=>H-P-(H-2*P)*(v/Math.max(total,1));
+  const ideal=`M${x(0)},${y(total)} L${x(days)},${y(0)}`;
+  const actual="M"+pts.map((v,i)=>`${x(i)},${y(v)}`).join(" L");
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%">
+    <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="#E3E8ED"/>
+    <line x1="${P}" y1="${P}" x2="${P}" y2="${H-P}" stroke="#E3E8ED"/>
+    <path d="${ideal}" stroke="#C7D3DD" stroke-width="1.5" stroke-dasharray="4 4" fill="none"/>
+    <path d="${actual}" stroke="#185FA5" stroke-width="2" fill="none"/>
+    <circle cx="${x(dayNow)}" cy="${y(remaining)}" r="3.5" fill="#185FA5"/>
+    <text x="${P}" y="${P-8}" font-size="9" fill="#8A97A3">${total} pts</text>
+    <text x="${W-P}" y="${H-P+14}" font-size="9" fill="#8A97A3" text-anchor="end">day ${days}</text>
+    <text x="${x(dayNow)+6}" y="${y(remaining)-6}" font-size="9" fill="#185FA5">${remaining} left</text>
+  </svg>`;
+}
+function velocitySVG(currentDone){
+  const data=[...state.velocity,{s:"S14",p:currentDone,cur:true}];
+  const W=300,H=150,P=24,max=Math.max(...data.map(d=>d.p),1);
+  const bw=(W-2*P)/data.length-12;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%">`+data.map((d,i)=>{
+    const h=(H-2*P)*(d.p/max), x=P+i*((W-2*P)/data.length)+6, y=H-P-h;
+    return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="3" fill="${d.cur?"#185FA5":"#C7D9EC"}"/>
+      <text x="${x+bw/2}" y="${y-5}" font-size="9" fill="#51606E" text-anchor="middle">${d.p}</text>
+      <text x="${x+bw/2}" y="${H-P+13}" font-size="9" fill="#8A97A3" text-anchor="middle">${d.s}</text>`;
+  }).join("")+`</svg>`;
+}
+function statusBars(tks){
+  const max=Math.max(...STATUSES.map(s=>tks.filter(x=>x.status===s).length),1);
+  return STATUSES.map(s=>{
+    const n=tks.filter(x=>x.status===s).length;
+    return `<div class="bar-row"><div class="bar-label">${s}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${n/max*100}%;background:${STATUS_COLORS[s]}"></div></div>
+      <div class="bar-val">${n}</div></div>`;
+  }).join("");
+}
+function workload(tks){
+  const people=[...new Set(tks.map(x=>x.assignee).filter(Boolean))];
+  return `<div class="workload">`+people.map(p=>{
+    const open=tks.filter(x=>x.assignee===p && x.status!=="Done");
+    const pts=open.reduce((s,x)=>s+ +x.effort,0);
+    return `<div class="wl-card"><span class="avatar" style="width:26px;height:26px;font-size:10px;margin:0">${initials(p)}</span>
+      <div><div class="wl-name">${esc(p)}</div><div class="wl-sub">${open.length} open tickets · ${pts} pts</div></div></div>`;
+  }).join("")+`</div>`;
+}
+
+/* ---------- Modal ---------- */
+function openNewCard(){
+  editingId=null;
+  document.getElementById("modal-title").textContent="New ticket";
+  document.getElementById("btn-delete").classList.add("hidden");
+  setForm({id:"AUTO",status:"New",title:"",desc:"",effort:"3",priority:"P3",assignee:"",category:"",feature:"",release:"",risks:"",deps:""});
+  document.getElementById("modal-overlay").classList.remove("hidden");
+}
+function openEdit(id){
+  const x=state.tickets.find(k=>k.id===id); if(!x) return;
+  editingId=id;
+  document.getElementById("modal-title").textContent="Edit "+id;
+  document.getElementById("btn-delete").classList.remove("hidden");
+  setForm(x);
+  document.getElementById("modal-overlay").classList.remove("hidden");
+}
+function setForm(x){
+  const st=document.getElementById("f-status");
+  st.innerHTML=STATUSES.map(s=>`<option${s===x.status?" selected":""}>${s}</option>`).join("");
+  document.getElementById("f-id").value=x.id;
+  document.getElementById("f-title").value=x.title;
+  document.getElementById("f-desc").value=x.desc||"";
+  document.getElementById("f-effort").value=x.effort;
+  document.getElementById("f-priority").value=x.priority;
+  document.getElementById("f-assignee").value=x.assignee||"";
+  document.getElementById("f-category").value=x.category||"";
+  document.getElementById("f-feature").value=x.feature||"";
+  document.getElementById("f-release").value=x.release||"";
+  document.getElementById("f-risks").value=x.risks||"";
+  document.getElementById("f-deps").value=x.deps||"";
+}
+function saveCard(){
+  const title=document.getElementById("f-title").value.trim();
+  if(!title){ document.getElementById("f-title").focus(); return; }
+  const data={
+    title, desc:document.getElementById("f-desc").value.trim(),
+    status:document.getElementById("f-status").value,
+    effort:document.getElementById("f-effort").value,
+    priority:document.getElementById("f-priority").value,
+    assignee:document.getElementById("f-assignee").value.trim(),
+    category:document.getElementById("f-category").value.trim(),
+    feature:document.getElementById("f-feature").value.trim(),
+    release:document.getElementById("f-release").value.trim(),
+    risks:document.getElementById("f-risks").value.trim(),
+    deps:document.getElementById("f-deps").value.trim(),
+  };
+  if(editingId){
+    Object.assign(state.tickets.find(k=>k.id===editingId), data);
+  }else{
+    state.tickets.push({id:"GO-"+state.nextId++, ...data});
+  }
+  persist(); closeModal(); render();
+}
+function deleteCard(){
+  state.tickets=state.tickets.filter(k=>k.id!==editingId);
+  persist(); closeModal(); render();
+}
+function closeModal(){ document.getElementById("modal-overlay").classList.add("hidden"); }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
+
+/* ---------- Utils ---------- */
+function esc(s){ return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function initials(n){ return n.trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
+
+/* ---------- Boot ---------- */
+(async function(){
+  await loadState();
+  render();
+  setSaveDot("", storageMode==="remote" ? "Saved · shared board" : "Saved to this browser");
+})();
+</script>
