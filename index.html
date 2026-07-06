@@ -3,7 +3,7 @@
 :root{
   --ink:#1B2733; --ink-2:#51606E; --ink-3:#8A97A3;
   --bg:#F5F7F9; --panel:#FFFFFF; --line:#E3E8ED; --line-2:#EDF1F4;
-  --accent:#185FA5; --accent-soft:#E8F1FA;
+  --accent:#228B22; --accent-soft:#E6F2E6;
   --green:#2E7D4F; --green-soft:#E7F3EC;
   --amber:#B26A00; --amber-soft:#FCF2E2;
   --red:#A32D2D; --red-soft:#FCEBEB;
@@ -42,7 +42,7 @@ body{font-family:var(--font);color:var(--ink);background:var(--bg)}
 .btn{font-family:var(--font);font-size:12.5px;font-weight:500;padding:7px 12px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
 .btn:hover{background:var(--bg)}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn-primary:hover{background:#134d87}
+.btn-primary:hover{background:#1a6b1a}
 .btn-danger{color:var(--red);border-color:transparent;background:transparent}
 .btn-danger:hover{background:var(--red-soft)}
 
@@ -214,7 +214,7 @@ body{font-family:var(--font);color:var(--ink);background:var(--bg)}
 <script>
 /* ============ Config ============ */
 const STATUSES = ["New","Ready","In Progress","Blocked","In Review","QA","Ready for Release","Done"];
-const STATUS_COLORS = {"New":"#8A97A3","Ready":"#5B4B9E","In Progress":"#185FA5","Blocked":"#A32D2D","In Review":"#B26A00","QA":"#0E7C86","Ready for Release":"#3B7DD8","Done":"#2E7D4F"};
+const STATUS_COLORS = {"New":"#8A97A3","Ready":"#5B4B9E","In Progress":"#228B22","Blocked":"#A32D2D","In Review":"#B26A00","QA":"#0E7C86","Ready for Release":"#3B7DD8","Done":"#2E7D4F"};
 const STORAGE_KEY = "goboard-state-v1";
 /* Storage tiers (auto-detected at load):
    - "remote": a /api/board endpoint exists and is configured → one shared
@@ -434,11 +434,11 @@ function burndownSVG(total,donePts){
     <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="#E3E8ED"/>
     <line x1="${P}" y1="${P}" x2="${P}" y2="${H-P}" stroke="#E3E8ED"/>
     <path d="${ideal}" stroke="#C7D3DD" stroke-width="1.5" stroke-dasharray="4 4" fill="none"/>
-    <path d="${actual}" stroke="#185FA5" stroke-width="2" fill="none"/>
-    <circle cx="${x(dayNow)}" cy="${y(remaining)}" r="3.5" fill="#185FA5"/>
+    <path d="${actual}" stroke="#228B22" stroke-width="2" fill="none"/>
+    <circle cx="${x(dayNow)}" cy="${y(remaining)}" r="3.5" fill="#228B22"/>
     <text x="${P}" y="${P-8}" font-size="9" fill="#8A97A3">${total} pts</text>
     <text x="${W-P}" y="${H-P+14}" font-size="9" fill="#8A97A3" text-anchor="end">day ${days}</text>
-    <text x="${x(dayNow)+6}" y="${y(remaining)-6}" font-size="9" fill="#185FA5">${remaining} left</text>
+    <text x="${x(dayNow)+6}" y="${y(remaining)-6}" font-size="9" fill="#228B22">${remaining} left</text>
   </svg>`;
 }
 function velocitySVG(currentDone){
@@ -447,7 +447,7 @@ function velocitySVG(currentDone){
   const bw=(W-2*P)/data.length-12;
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%">`+data.map((d,i)=>{
     const h=(H-2*P)*(d.p/max), x=P+i*((W-2*P)/data.length)+6, y=H-P-h;
-    return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="3" fill="${d.cur?"#185FA5":"#C7D9EC"}"/>
+    return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="3" fill="${d.cur?"#228B22":"#C7D9EC"}"/>
       <text x="${x+bw/2}" y="${y-5}" font-size="9" fill="#51606E" text-anchor="middle">${d.p}</text>
       <text x="${x+bw/2}" y="${H-P+13}" font-size="9" fill="#8A97A3" text-anchor="middle">${d.s}</text>`;
   }).join("")+`</svg>`;
