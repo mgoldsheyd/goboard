@@ -66,3 +66,7 @@ at your registrar. No code changes needed.
 
 - `index.html` — the entire app (UI + logic)
 - `api/board.js` — the shared-storage endpoint; dormant until Tier 3
+- `api/tickets.js` — lets external automations create a single ticket via
+  `POST /api/tickets` (e.g. an email-to-ticket workflow). Needs Tier 3 storage
+  plus a `TICKETS_API_KEY` env var (any random string you choose) sent as
+  `Authorization: Bearer <key>`.
