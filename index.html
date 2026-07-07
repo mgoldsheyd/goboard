@@ -519,13 +519,47 @@ function toggleSprint(){
     openSprint();
   }
 }
-function closeSprint(){
-  const rep = generateReport();
+async function closeSprint(){
+  const btn = document.getElementById("btn-sprint");
+  btn.disabled = true; btn.textContent = "Writing report…";
+  // Ask the AI endpoint for executive prose; fall back to the local template
+  // if it's not configured (Tier 2, missing key) or fails.
+  let sections = null;
+  try{
+    const r = await fetch("/api/report", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({digest: buildDigest()})
+    });
+    if(r.ok){ sections = (await r.json()).report; }
+  }catch(e){ /* fall back below */ }
+  btn.disabled = false;
+  const rep = sections ? {...reportMeta(), ...sections} : generateReport();
   state.reports.unshift(rep);
   state.velocity.push({s:"S"+state.sprint.number, p:rep.donePts});
   state.sprint.status = "closed";
   persist();
   switchView("sprints");
+}
+function buildDigest(){
+  return {
+    sprint: state.sprint.number,
+    startedAt: state.sprint.startedAt,
+    velocityHistory: state.velocity,
+    tickets: state.tickets.map(x=>({
+      title:x.title, desc:x.desc, status:x.status, priority:x.priority,
+      effort:+x.effort, assignee:x.assignee, category:x.category,
+      feature:x.feature, risks:x.risks, deps:x.deps
+    }))
+  };
+}
+function reportMeta(){
+  const done = state.tickets.filter(x=>x.status==="Done");
+  return {
+    sprint: state.sprint.number,
+    weekOf: new Date().toISOString(),
+    donePts: done.reduce((s,x)=>s+ +x.effort,0)
+  };
 }
 function openSprint(){
   state.sprint = {number: state.sprint.number+1, status:"active", startedAt: new Date().toISOString()};
@@ -546,9 +580,7 @@ function generateReport(){
   const topOpen = [...open].sort((a,b)=>a.priority.localeCompare(b.priority)||a.id.localeCompare(b.id)).slice(0,3);
   const list = a=>a.map(x=>`${x.id} "${x.title}"`).join(", ");
   return {
-    sprint: state.sprint.number,
-    weekOf: new Date().toISOString(),
-    donePts,
+    ...reportMeta(),
     goals: features.length
       ? `Advance ${features.join(", ")} and deliver the sprint's committed ${totalPts} points.`
       : `Deliver the sprint's committed ${totalPts} points.`,
