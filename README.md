@@ -70,3 +70,7 @@ at your registrar. No code changes needed.
   `POST /api/tickets` (e.g. an email-to-ticket workflow). Needs Tier 3 storage
   plus a `TICKETS_API_KEY` env var (any random string you choose) sent as
   `Authorization: Bearer <key>`.
+- `api/mcp.js` — remote MCP server so Claude apps (Cowork, claude.ai) can use
+  the board as a custom connector, with create_ticket / list_tickets /
+  move_ticket tools. Add it by URL: `https://<your-app>.vercel.app/api/mcp?key=<TICKETS_API_KEY>`
+  (same env vars as api/tickets.js; keep the URL secret since it embeds the key).
