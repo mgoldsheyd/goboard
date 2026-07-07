@@ -74,3 +74,6 @@ at your registrar. No code changes needed.
   the board as a custom connector, with create_ticket / list_tickets /
   move_ticket tools. Add it by URL: `https://<your-app>.vercel.app/api/mcp?key=<TICKETS_API_KEY>`
   (same env vars as api/tickets.js; keep the URL secret since it embeds the key).
+- `api/report.js` — writes the executive sprint report with the Claude API
+  when a sprint is closed. Needs an `ANTHROPIC_API_KEY` env var in Vercel;
+  without it the app quietly falls back to a template-generated report.
