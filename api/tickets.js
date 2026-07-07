@@ -51,6 +51,7 @@ export default async function handler(req, res) {
 
     const ticket = {
       id: "GO-" + state.nextId++,
+      created: new Date().toISOString(),
       title,
       desc: ((body.desc) || "").trim(),
       effort: body.effort ? String(body.effort) : "3",

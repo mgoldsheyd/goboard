@@ -97,6 +97,7 @@ async function runTool(redis, name, args) {
     const state = await loadState(redis);
     const ticket = {
       id: "GO-" + state.nextId++,
+      created: new Date().toISOString(),
       title,
       desc: str(args.desc),
       effort: args.effort ? String(args.effort) : "3",
