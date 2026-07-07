@@ -28,11 +28,32 @@ try:
 except ImportError:
     SSL_CONTEXT = ssl.create_default_context()
 
-EXTRACTION_PROMPT = """You turn an email into a goboard ticket. Read the email
-below and respond with ONLY a JSON object (no prose, no markdown fences)
-with these fields:
+# Senders whose mail is never a work request — matched as case-insensitive
+# substrings of the From header. Filters automated notifications cheaply,
+# before spending a Claude call on them.
+IGNORE_SENDERS = (
+    "no-reply", "noreply", "no_reply", "donotreply", "do-not-reply",
+    "mailer-daemon", "postmaster", "bounce+", "bounces@",
+    "notifications@", "notify@", "@vercel.com",
+)
 
-  title (string, required, short summary)
+
+def sender_ignored(msg):
+    frm = (msg.get("From", "") or "").lower()
+    return any(s in frm for s in IGNORE_SENDERS)
+
+
+EXTRACTION_PROMPT = """You process an email sent to a project's support inbox.
+
+First decide: is this an actionable work request that a team member would turn
+into a task? Automated notifications, security alerts, newsletters, receipts,
+delivery failures, calendar invites, and personal chit-chat are NOT requests.
+
+Respond with ONLY a JSON object (no prose, no markdown fences).
+If it is NOT a request, respond exactly: {{"is_request": false}}
+If it IS a request, respond with:
+  is_request (true)
+  title (string, short summary)
   desc (string, the body/details)
   priority ("P1"|"P2"|"P3"|"P4"|"P5", guess urgency; default "P3")
   assignee (string, a person's name if mentioned, else "")
@@ -133,9 +154,22 @@ def main():
 
     for num, msg in messages:
         subject = msg.get("Subject", "(no subject)")
+
+        # Cheap first pass: automated senders never file tickets.
+        if sender_ignored(msg):
+            imap.store(num, "+FLAGS", "\\Seen")
+            print(f"Ignored (automated sender): '{subject}'")
+            continue
+
         try:
             body = get_body_text(msg)
             fields = extract_ticket_fields(subject, body)
+            # Second pass: Claude's own judgment on whether it's a real request.
+            if not fields.get("is_request"):
+                imap.store(num, "+FLAGS", "\\Seen")
+                print(f"Ignored (not a request): '{subject}'")
+                continue
+            fields.pop("is_request", None)
             result = create_ticket(fields)
             imap.store(num, "+FLAGS", "\\Seen")
             print(f"Created {result['ticket']['id']} from '{subject}'")
