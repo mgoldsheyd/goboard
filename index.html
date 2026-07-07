@@ -1,5 +1,6 @@
 <!-- goBoard — scrum project management board with persistent shared storage -->
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 :root{
   --ink:#1B2733; --ink-2:#51606E; --ink-3:#8A97A3;
@@ -135,9 +136,35 @@ body{font-family:var(--font);color:var(--ink);background:var(--bg)}
 .empty{font-size:12px;color:var(--ink-3);text-align:center;padding:18px 6px}
 
 @media (max-width:760px){
-  .sidebar{width:60px;min-width:60px;padding:12px 8px}
+  body{background:var(--panel)}
+  .app{height:100dvh;max-height:none;min-height:0;border:none;border-radius:0}
+
+  /* Sidebar collapses to an icon rail */
+  .sidebar{width:54px;min-width:54px;padding:12px 6px}
+  .logo{padding:2px 0 12px;justify-content:center}
   .logo-text,.logo-sub,.nav-label,.nav-item span,.sprint-progress,.save-dot b{display:none}
-  .nav-item{justify-content:center}
+  .nav-item{justify-content:center;padding:9px 0}
+  .save-dot{justify-content:center;padding:8px 0 0}
+
+  /* Topbar wraps; title and buttons stay tappable */
+  .topbar{padding:10px 12px;flex-wrap:wrap}
+  .topbar h1{font-size:15px}
+  .sprint-badge{margin-left:6px}
+  .btn{padding:8px 11px;font-size:12px}
+
+  /* Filters stack; stats drop to their own full-width row */
+  .filterbar{padding:8px 12px;gap:6px}
+  .filterbar select{flex:1 1 30%;min-width:0}
+  .stats{width:100%;margin-left:0;gap:12px;justify-content:space-between}
+
+  /* Board: one column at a time, peeking the next */
+  .view{padding:12px}
+  .col{width:80vw;min-width:80vw;max-width:300px}
+
+  /* Modal becomes a bottom sheet with single-column fields */
+  .modal-overlay{padding:0;align-items:flex-end}
+  .modal{max-width:none;max-height:92dvh;border-radius:14px 14px 0 0}
+  .field-group{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
